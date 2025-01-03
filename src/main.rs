@@ -13,7 +13,7 @@ pub mod time {
     const NANOS_PER_MILLI: u64 = 1_000_000;
     const RUN_OS: &str = std::env::consts::OS;
 
-    const RUNNING: AtomicBool = AtomicBool::new(false);
+    static RUNNING: AtomicBool = AtomicBool::new(false);
 
     static REALTIME: AtomicU64 = AtomicU64::new(0);
     static REALTIME_GUARD: AtomicU64 = AtomicU64::new(0);
@@ -42,9 +42,9 @@ pub mod time {
         }
 
         fn monotonic() -> u64 {
-            println!("{:?}", RUNNING.load(Ordering::SeqCst) == true);
+            println!("{:?}", RUNNING.load(Ordering::SeqCst));
             assert!(
-                RUNNING.load(Ordering::SeqCst) == true,
+                RUNNING.load(Ordering::SeqCst),
                 "Time must be initialized with Time::new()."
             );
 
@@ -69,7 +69,7 @@ pub mod time {
 
         fn realtime() -> u64 {
             assert!(
-                RUNNING.load(Ordering::SeqCst) == true,
+                RUNNING.load(Ordering::SeqCst),
                 "Time must be initialized with Time::new()."
             );
 
@@ -97,21 +97,9 @@ pub mod time {
             now - MONOTONIC_GUARD.load(Ordering::SeqCst)
         }
 
-        pub fn elapsed_rt() -> u64 {
-            let now = Self::realtime();
-            now - REALTIME_GUARD.load(Ordering::SeqCst)
-        }
-
-        fn ticks_with(fidelity: &Fidelity) -> u64 {
-            let div = match fidelity {
-                Fidelity::Nanos(n) => *n as u64,
-                Fidelity::Millis(m) => *m as u64 * NANOS_PER_MILLI,
-                Fidelity::Seconds(s) => *s as u64 * NANOS_PER_SEC,
-            };
-
+        pub fn elapsed_from(from: u64) -> u64 {
             let now = Self::elapsed();
-
-            now / div
+            now - from - MONOTONIC_GUARD.load(Ordering::SeqCst)
         }
 
         fn monotonic_linux() -> u64 {
@@ -193,7 +181,23 @@ pub mod time {
         }
 
         pub fn ticks(&self) -> u64 {
-            Time::ticks_with(&self.fidelity)
+            Self::ticks_with(self.started_at, &self.fidelity)
+        }
+
+        pub fn ticks_epoch(&self) -> u64 {
+            Self::ticks_with(0, &self.fidelity)
+        }
+
+        fn ticks_with(from: u64, fidelity: &Fidelity) -> u64 {
+            let div = match fidelity {
+                Fidelity::Nanos(n) => *n as u64,
+                Fidelity::Millis(m) => *m as u64 * NANOS_PER_MILLI,
+                Fidelity::Seconds(s) => *s as u64 * NANOS_PER_SEC,
+            };
+
+            let now = Time::elapsed_from(from);
+
+            now / div
         }
     }
 }
