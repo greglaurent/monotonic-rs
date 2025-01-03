@@ -5,23 +5,18 @@ use std::{
 
 use nix::sys::time::TimeSpec;
 
-const LINUX: &'static str = "linux";
+const LINUX: &str = "linux";
 //TODO: const WINDOWS: &'static str = "windows";
+
 const NANOS_PER_SEC: u64 = 1_000_000_000;
 const NANOS_PER_MILLI: u64 = 1_000_000;
-const RUN_OS: &'static str = std::env::consts::OS;
+const RUN_OS: &str = std::env::consts::OS;
 
 static REALTIME: AtomicU64 = AtomicU64::new(0);
 static REALTIME_GUARD: AtomicU64 = AtomicU64::new(0);
 
 static MONOTONIC: AtomicU64 = AtomicU64::new(0);
 static MONOTONIC_GUARD: AtomicU64 = AtomicU64::new(0);
-
-pub enum Fidelity {
-    Nanos(usize),
-    Millis(usize),
-    Seconds(usize),
-}
 
 pub struct Time;
 impl Time {
@@ -89,7 +84,8 @@ impl Time {
         };
 
         let now = Self::elapsed();
-        now / div as u64
+
+        now / div
     }
 
     fn monotonic_linux() -> u64 {
@@ -104,9 +100,7 @@ impl Time {
             Err(_) => panic!("System CLOCK_BOOTTIME is required."),
         };
 
-        let bt = Self::adjust_time(time);
-
-        bt
+        Self::adjust_time(time)
     }
 
     fn realtime_unix() -> u64 {
@@ -131,6 +125,12 @@ impl Time {
 
         t as u64
     }
+}
+
+pub enum Fidelity {
+    Nanos(usize),
+    Millis(usize),
+    Seconds(usize),
 }
 
 fn main() {
