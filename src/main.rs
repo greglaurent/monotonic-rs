@@ -169,6 +169,8 @@ pub mod time {
         }
 
         pub fn started_at(&self) -> u64 {
+            assert!(self.started_at > 0);
+
             self.started_at
         }
 
@@ -181,10 +183,14 @@ pub mod time {
         }
 
         pub fn ticks(&self) -> u64 {
+            if self.started_at == 0 {
+                return 0;
+            }
+
             Self::ticks_with(self.started_at, &self.fidelity)
         }
 
-        pub fn ticks_epoch(&self) -> u64 {
+        pub fn epoch(&self) -> u64 {
             Self::ticks_with(0, &self.fidelity)
         }
 
